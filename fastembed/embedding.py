@@ -175,6 +175,13 @@ class Embedding(ABC):
         _type_: _description_
     """
 
+    def __init__(self, cache_dir: str = None):
+        if cache_dir is None:
+            default_cache_dir = os.path.join(tempfile.gettempdir(), "fastembed_cache")
+            cache_dir = Path(os.getenv("FASTEMBED_CACHE_PATH", default_cache_dir))
+            cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_dir = cache_dir
+        
     @abstractmethod
     def embed(self, texts: Iterable[str], batch_size: int = 256, parallel: int = None) -> List[np.ndarray]:
         raise NotImplementedError
@@ -469,15 +476,10 @@ class FlagEmbedding(Embedding):
         Raises:
             ValueError: If the model_name is not in the format <org>/<model> e.g. BAAI/bge-base-en.
         """
+        super().__init__(cache_dir=cache_dir)
+        
         self.model_name = model_name
-
-        if cache_dir is None:
-            default_cache_dir = os.path.join(tempfile.gettempdir(), "fastembed_cache")
-            cache_dir = Path(os.getenv("FASTEMBED_CACHE_PATH", default_cache_dir))
-            cache_dir.mkdir(parents=True, exist_ok=True)
-
-        self._cache_dir = cache_dir
-        self._model_dir = self.retrieve_model_gcs(model_name, cache_dir)
+        self._model_dir = self.retrieve_model_gcs(model_name, self._cache_dir)
         self._max_length = max_length
 
         self.model = EmbeddingModel(self._model_dir, self.model_name, max_length=max_length,
@@ -588,15 +590,10 @@ class JinaEmbedding(Embedding):
         Raises:
             ValueError: If the model_name is not in the format <org>/<model> e.g. BAAI/bge-base-en.
         """
+        super().__init__(cache_dir=cache_dir)
+        
         self.model_name = model_name
-
-        if cache_dir is None:
-            default_cache_dir = os.path.join(tempfile.gettempdir(), "fastembed_cache")
-            cache_dir = Path(os.getenv("FASTEMBED_CACHE_PATH", default_cache_dir))
-            cache_dir.mkdir(parents=True, exist_ok=True)
-
-        self._cache_dir = cache_dir
-        self._model_dir = self.retrieve_model_hf(model_name, cache_dir)
+        self._model_dir = self.retrieve_model_hf(model_name, self._cache_dir)
         self._max_length = max_length
 
         self.model = EmbeddingModel(self._model_dir, self.model_name, max_length=max_length,
